@@ -609,13 +609,13 @@ void smart_rocket_think(edict_t *ent)
 	vec_t	speed;
 	while((search=findradius(search,ent->s.origin,1000))!=NULL){
 		/* i'm only interested in monsters and players, so ignore all other entitites*/
-		//if (!(search->svflags & SVF_MONSTER) && !search->client)
-		//	continue;
+		if (!(search->svflags & SVF_MONSTER) && !search->client)//had to comment this out to test of non player/enemy entities.
+			continue;
 		if (search == ent->owner)
 			continue;
 
 		/* of those entities ony worry about the ones that are 
-			visible to and infront of the origin*/
+			visible to and infront of the rocket*/
 		if(!visible(ent,search))
 			continue;
 		if(!infront(ent,search))
@@ -633,7 +633,7 @@ void smart_rocket_think(edict_t *ent)
 
 	if(target!=NULL){
 	    VectorNormalize(targetdir);
-		VectorScale(targetdir, 0.2, targetdir);
+		VectorScale(targetdir, 0.2, targetdir); //scale so the rocket doesn't suddenly turn
 		VectorAdd(targetdir, ent->movedir, targetdir);
 		VectorNormalize(targetdir);
 		VectorCopy(targetdir, ent->movedir);
