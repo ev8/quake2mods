@@ -597,7 +597,53 @@ void rocket_touch (edict_t *ent, edict_t *other, cplane_t *plane, csurface_t *su
 
 	G_FreeEdict (ent);
 }
+/* a new think function that will adjust the rcoket's vector
+	to direct it toward the closest target*/
+void smart_rocket_think(edict_t *ent)
+{	
+	/*going to use findradius which returns all the entities within a radius 
+		of the orign, in this case the rocket*/
+	edict_t *target = NULL;		//to hold our traget when it's chosen 
+	edict_t *search = NULL;		// to iterate over entities
+	vec3_t targetdir, searchdir;  //to compute vector math bewteen potential targets
+	vec_t	speed;
+	while((search=findradius(search,ent->s.origin,1000))!=NULL){
+		/* i'm only interested in monsters and players, so ignore all other entitites*/
+		//if (!(search->svflags & SVF_MONSTER) && !search->client)
+		//	continue;
+		if (search == ent->owner)
+			continue;
 
+		/* of those entities ony worry about the ones that are 
+			visible to and infront of the origin*/
+		if(!visible(ent,search))
+			continue;
+		if(!infront(ent,search))
+			continue;
+		/*figure out the distance from the rocket*/
+
+		VectorSubtract(search->s.origin,ent->s.origin,searchdir);
+		//target = search;// first eligible entity
+		if((target=NULL)||(VectorLength(searchdir) < VectorLength(targetdir))){
+			target=search;
+			VectorCopy(searchdir,targetdir);
+		}
+	}
+	/* now we have a target and it's direction, redirect the rocket*/
+
+	if(target!=NULL){
+	    VectorNormalize(targetdir);
+		VectorScale(targetdir, 0.2, targetdir);
+		VectorAdd(targetdir, ent->movedir, targetdir);
+		VectorNormalize(targetdir);
+		VectorCopy(targetdir, ent->movedir);
+		vectoangles(targetdir, ent->s.angles);
+		speed = VectorLength(ent->velocity);
+		VectorScale(targetdir, speed, ent->velocity);
+	}
+		ent->nextthink = level.time + .1;//tell the rocket to think again in .1 seconds.
+	return;
+}
 void fire_rocket (edict_t *self, vec3_t start, vec3_t dir, int damage, int speed, float damage_radius, int radius_damage)
 {
 	edict_t	*rocket;
@@ -616,8 +662,11 @@ void fire_rocket (edict_t *self, vec3_t start, vec3_t dir, int damage, int speed
 	rocket->s.modelindex = gi.modelindex ("models/objects/rocket/tris.md2");
 	rocket->owner = self;
 	rocket->touch = rocket_touch;
-	rocket->nextthink = level.time + 8000/speed;
-	rocket->think = G_FreeEdict;
+	/*rocket->nextthink = level.time + 8000/speed;
+	rocket->think = G_FreeEdict;*/
+	// make the rocket think every second with my new think function
+	rocket->nextthink = level.time + .1;
+	rocket->think = smart_rocket_think;
 	rocket->dmg = damage;
 	rocket->radius_dmg = radius_damage;
 	rocket->dmg_radius = damage_radius;
